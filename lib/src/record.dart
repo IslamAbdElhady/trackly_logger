@@ -1,4 +1,5 @@
 import 'level.dart';
+import 'location.dart';
 
 /// A single log event, passed to `TracklyLogger.output`.
 class TracklyRecord {
@@ -11,7 +12,7 @@ class TracklyRecord {
     this.error,
     this.stackTrace,
     this.extra,
-    this.caller,
+    this.location,
   });
 
   /// The severity of this record.
@@ -35,9 +36,12 @@ class TracklyRecord {
   /// Extra key/value data attached to this record, if any.
   final Map<String, Object?>? extra;
 
-  /// The file name and line that logged this record, e.g. `main.dart:12`.
+  /// Where in the code this record was logged.
   ///
   /// Only available on the Dart VM (Flutter debug builds, Dart CLI and
   /// server apps) and when `TracklyLogger.showCaller` is `true`.
-  final String? caller;
+  final TracklyLocation? location;
+
+  /// The short form of [location], e.g. `main.dart:12`.
+  String? get caller => location?.toString();
 }

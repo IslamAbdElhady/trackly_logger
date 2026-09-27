@@ -1,5 +1,6 @@
 import 'level.dart';
 import 'output.dart';
+import 'platform/platform.dart';
 import 'record.dart';
 
 /// Prints records to the console, one `print` call per line.
@@ -7,22 +8,36 @@ import 'record.dart';
 /// Output looks like:
 ///
 /// ```text
-/// [2026-09-27 10:39:44.762] [INFO   ] ℹ️ [AuthService] Signed in [auth_service.dart:42]
+/// [2026-09-27 10:39:44.762] [INFO   ] ℹ️ [Auth] Signed in (package:app/auth.dart:42:5)
 /// ```
+///
+/// The location at the end is a link in VS Code and Android Studio: click it
+/// to open the file at that line.
 class TracklyConsoleOutput extends TracklyOutput {
   /// Creates a console output.
-  ///
-  /// Set [colors] to `false` if your console shows raw codes such as `[33m`
-  /// instead of colors (for example, the Xcode console).
   const TracklyConsoleOutput({
-    this.colors = true,
+    this.colors,
     this.emojis = true,
     this.timestamp = true,
+    this.callerLinks = true,
     this.maxLineLength = 800,
   }) : assert(maxLineLength == null || maxLineLength > 0);
 
   /// Whether to color each line with ANSI escape codes based on its level.
-  final bool colors;
+  ///
+  /// When `null`, colors are on everywhere except iOS, whose logs show the
+  /// escape codes as text, such as `\^[[34m`.
+  final bool? colors;
+
+  /// Whether [colors] ends up on.
+  bool get usesColors => colors ?? !isIOS;
+
+  /// Whether to show where each record was logged as a full path, such as
+  /// `package:app/src/auth.dart:42:5`, which VS Code and Android Studio turn
+  /// into a link to the code.
+  ///
+  /// When `false`, shows the short form instead, such as `auth.dart:42`.
+  final bool callerLinks;
 
   /// Whether to show the level's emoji.
   final bool emojis;
@@ -56,7 +71,10 @@ class TracklyConsoleOutput extends TracklyOutput {
     if (emojis) text.write('${record.level.emoji} ');
     if (record.tag != null) text.write('[${record.tag}] ');
     text.write(record.message);
-    if (record.caller != null) text.write(' [${record.caller}]');
+    final location = record.location;
+    if (location != null) {
+      text.write(' (${callerLinks ? location.link : location})');
+    }
 
     final extra = record.extra;
     if (extra != null && extra.isNotEmpty) text.write(' | extra: $extra');
@@ -65,7 +83,7 @@ class TracklyConsoleOutput extends TracklyOutput {
     final stackTrace = record.stackTrace?.toString().trimRight() ?? '';
     if (stackTrace.isNotEmpty) text.write('\n$stackTrace');
 
-    final color = colors ? _colorOf(record.level) : null;
+    final color = usesColors ? _colorOf(record.level) : null;
     return [
       for (final line in text.toString().split('\n'))
         for (final chunk in _split(line))
@@ -83,8 +101,16 @@ class TracklyConsoleOutput extends TracklyOutput {
     var start = 0;
     while (line.length - start > max) {
       var end = start + max;
-      // Don't cut an emoji or other surrogate pair in half.
-      if (end - 1 > start && _isHighSurrogate(line.codeUnitAt(end - 1))) end--;
+      // Break after a space when there's one in the second half, so words
+      // and links stay whole.
+      final space = line.lastIndexOf(' ', end - 1);
+      if (space >= start + max ~/ 2) {
+        end = space + 1;
+      } else if (end - 1 > start &&
+          _isHighSurrogate(line.codeUnitAt(end - 1))) {
+        // Don't cut an emoji or other surrogate pair in half.
+        end--;
+      }
       yield line.substring(start, end);
       start = end;
     }

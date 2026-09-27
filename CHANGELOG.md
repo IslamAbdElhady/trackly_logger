@@ -1,3 +1,19 @@
+## 0.2.0
+
+* **Jump to the code**: each log now ends with its full location, such as
+  `(package:app/login_page.dart:42:7)`, which VS Code and Android Studio turn
+  into a link that opens the file at that line.
+  * `TracklyConsoleOutput(callerLinks: false)` shows the short `main.dart:42`
+    form instead.
+* New `TracklyRecord.location` (`TracklyLocation`) with the `uri`, `line`,
+  `column`, and `link` of where a record was logged. `caller` still returns
+  the short form.
+* Colors are off by default on iOS, where logs showed the color codes as text.
+  `TracklyConsoleOutput.colors` is now `null` by default, meaning automatic.
+* Long lines are split at spaces, so words and links stay whole.
+* **Breaking**: the `caller` parameter of `TracklyRecord`'s constructor is
+  replaced by `location`.
+
 ## 0.1.0
 
 * Initial release.

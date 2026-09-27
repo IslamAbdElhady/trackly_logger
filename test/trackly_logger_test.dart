@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:trackly_logger/trackly_logger.dart';
@@ -45,7 +46,7 @@ TracklyRecord _record({
   Object? error,
   StackTrace? stackTrace,
   Map<String, Object?>? extra,
-  String? caller,
+  TracklyLocation? location,
 }) => TracklyRecord(
   level: level,
   message: message,
@@ -54,7 +55,7 @@ TracklyRecord _record({
   error: error,
   stackTrace: stackTrace,
   extra: extra,
-  caller: caller,
+  location: location,
 );
 
 void main() {
@@ -173,6 +174,18 @@ void main() {
       expect(capture.records.single.caller, 'trackly_logger_test.dart:$line');
     });
 
+    test('has the full location with a column', () {
+      final line = _currentLine() + 1;
+      trackly.info('m');
+      final location = capture.records.single.location!;
+
+      expect(location.uri.path, endsWith('/test/trackly_logger_test.dart'));
+      expect(location.line, line);
+      expect(location.column, 15); // The column of `info`.
+      expect(location.link, '${location.uri}:$line:15');
+      expect(location.fileName, 'trackly_logger_test.dart');
+    });
+
     test('is null when showCaller is off', () {
       TracklyLogger.showCaller = false;
       trackly.info('m');
@@ -219,16 +232,56 @@ void main() {
       final lines = plain.format(
         _record(
           tag: 'Auth',
-          caller: 'main.dart:10',
+          location: TracklyLocation(Uri.parse('package:app/main.dart'), 10, 5),
           extra: {'id': 1},
           error: 'boom',
         ),
       );
 
       expect(lines, [
-        '[2024-01-02 03:04:05.006] [INFO   ] ℹ️ [Auth] hello [main.dart:10] '
-            '| extra: {id: 1} | error: boom',
+        '[2024-01-02 03:04:05.006] [INFO   ] ℹ️ [Auth] hello '
+            '(package:app/main.dart:10:5) | extra: {id: 1} | error: boom',
       ]);
+    });
+
+    test('can show the short caller instead of the link', () {
+      const short = TracklyConsoleOutput(
+        colors: false,
+        timestamp: false,
+        emojis: false,
+        callerLinks: false,
+      );
+      final record = _record(
+        location: TracklyLocation(Uri.parse('package:app/main.dart'), 10, 5),
+      );
+      expect(short.format(record), ['[INFO   ] hello (main.dart:10)']);
+    });
+
+    test('wraps long lines at spaces so links stay whole', () {
+      const output = TracklyConsoleOutput(
+        colors: false,
+        timestamp: false,
+        emojis: false,
+        maxLineLength: 40,
+      );
+      final record = _record(
+        message: 'word ' * 10,
+        location: TracklyLocation(Uri.parse('package:app/a.dart'), 1, 2),
+      );
+      final lines = output.format(record);
+
+      expect(lines.every((line) => line.length <= 40), isTrue);
+      expect(
+        lines.join(),
+        '[INFO   ] ${'word ' * 10} (package:app/a.dart:1:2)',
+      );
+      expect(lines.last, contains('package:app/a.dart:1:2'));
+    });
+
+    test('turns colors off by default only on iOS', () {
+      expect(const TracklyConsoleOutput().usesColors, !Platform.isIOS);
+      expect(const TracklyConsoleOutput(colors: true).usesColors, isTrue);
+      expect(const TracklyConsoleOutput(colors: false).usesColors, isFalse);
     });
 
     test('leaves out missing parts without extra spaces', () {
@@ -310,7 +363,7 @@ void main() {
       final printed = _capturePrints(() => trackly.info('a\nb'));
       expect(printed, hasLength(2));
       expect(printed.first, startsWith('[INFO   ] ℹ️ a'));
-      expect(printed.last, startsWith('b ['));
+      expect(printed.last, startsWith('b ('));
     });
   });
 
@@ -422,8 +475,13 @@ void main() {
 
     test('adds caller and extra to the message', () {
       expect(
-        output.format(_record(caller: 'main.dart:3', extra: {'id': 1})),
-        'hello [main.dart:3] | extra: {id: 1}',
+        output.format(
+          _record(
+            location: TracklyLocation(Uri.parse('package:app/main.dart'), 3, 1),
+            extra: {'id': 1},
+          ),
+        ),
+        'hello (package:app/main.dart:3:1) | extra: {id: 1}',
       );
     });
 

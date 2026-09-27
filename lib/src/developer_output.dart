@@ -40,7 +40,8 @@ class TracklyDeveloperOutput extends TracklyOutput {
   /// The level, tag, time, error, and stack trace are passed separately.
   String format(TracklyRecord record) {
     final text = StringBuffer(record.message);
-    if (record.caller != null) text.write(' [${record.caller}]');
+    final location = record.location;
+    if (location != null) text.write(' (${location.link})');
     final extra = record.extra;
     if (extra != null && extra.isNotEmpty) text.write(' | extra: $extra');
     return text.toString();

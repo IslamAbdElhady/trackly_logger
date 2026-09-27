@@ -194,7 +194,7 @@ class TracklyLogger {
       error: error,
       stackTrace: stackTrace,
       extra: extra,
-      caller: showCaller ? findCaller(StackTrace.current) : null,
+      location: showCaller ? findCaller(StackTrace.current) : null,
     );
     if (filter?.call(record) ?? true) output.write(record);
   }

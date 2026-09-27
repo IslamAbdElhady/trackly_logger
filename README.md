@@ -5,20 +5,22 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A lightweight, zero-dependency logger for Dart and Flutter. Colored, readable
-logs that tell you exactly which file and line they came from.
+logs that tell you exactly which line of code wrote them. Click the location
+in VS Code or Android Studio to jump straight to it.
 
 ```text
-[2026-09-27 10:53:53.664] [DEBUG  ] 🐞 Config loaded [main.dart:6] | extra: {env: dev, retries: 3}
-[2026-09-27 10:53:53.665] [SUCCESS] ✅ Connected to the server [main.dart:8]
-[2026-09-27 10:53:53.665] [WARNING] ⚠️ Cache is almost full [main.dart:9]
-[2026-09-27 10:53:53.666] [INFO   ] ℹ️ [CartService] Added apple to the cart [main.dart:40]
-[2026-09-27 10:53:53.793] [DEBUG  ] 🐞 Load users took 126 ms [main.dart:25]
+[2026-09-27 10:53:53.664] [DEBUG  ] 🐞 Config loaded (package:my_app/main.dart:6:11) | extra: {env: dev, retries: 3}
+[2026-09-27 10:53:53.665] [SUCCESS] ✅ Connected to the server (package:my_app/main.dart:8:11)
+[2026-09-27 10:53:53.665] [WARNING] ⚠️ Cache is almost full (package:my_app/main.dart:9:11)
+[2026-09-27 10:53:53.666] [INFO   ] ℹ️ [CartService] Added apple (package:my_app/cart/cart_service.dart:12:40)
+[2026-09-27 10:53:53.793] [DEBUG  ] 🐞 Load users took 126 ms (package:my_app/users/users_page.dart:25:31)
 ```
 
 ## Features
 
 - **Seven levels**: trace, debug, info, success, warning, error, fatal.
-- **Automatic caller info**: every log shows the `file.dart:line` that wrote it.
+- **Jump to the code**: every log ends with the file, line, and column that
+  wrote it, as a link that opens the code in VS Code and Android Studio.
 - **Colors, emojis, and timestamps**, each of which can be turned off.
 - **Tags**: per-feature loggers, or the class name through a mixin.
 - **Errors, stack traces, and extra data** on any log.
@@ -110,7 +112,7 @@ TracklyLogger.enabled = true;
 // Ignore anything below this level.
 TracklyLogger.minLevel = TracklyLevel.info;
 
-// Turn off file:line detection to skip capturing a stack trace per log.
+// Turn off the code location to skip capturing a stack trace per log.
 TracklyLogger.showCaller = false;
 
 // Drop specific records, e.g. mute a noisy tag.
@@ -118,15 +120,17 @@ TracklyLogger.filter = (record) => record.tag != 'Network';
 
 // Change how logs are printed.
 TracklyLogger.output = const TracklyConsoleOutput(
-  colors: true,
+  colors: true, // Default: on, except on iOS.
   emojis: true,
   timestamp: true,
+  callerLinks: true, // false shows `main.dart:6` instead of a full link.
   maxLineLength: 800, // Longer lines are split so logcat doesn't cut them.
 );
 ```
 
-If your console shows codes like `[33m` instead of colors (for example the
-Xcode console), use `TracklyConsoleOutput(colors: false)`.
+Colors are off by default on iOS, because iOS logs show the color codes as
+text, such as `\^[[34m`. If your console shows codes like `[33m` elsewhere,
+use `TracklyConsoleOutput(colors: false)`.
 
 ## Outputs
 
@@ -200,13 +204,30 @@ void main() {
 }
 ```
 
-## Caller info
+## Jump to the code
 
-The `file.dart:line` part is read from the stack trace, so it's available
-wherever Dart produces readable stack traces, such as Flutter apps in debug mode
-and Dart CLI and server apps. When stack traces aren't readable, for example on
-the web or in builds using `--obfuscate` or `--split-debug-info`, it's left out
-and everything else still works.
+Every log ends with where it was written, such as
+`(package:my_app/auth/login_page.dart:42:7)`. IDEs turn this into a link to
+that line:
+
+| Where you read the logs | Click the location |
+| --- | --- |
+| VS Code Debug Console (run with F5) | ✓ |
+| VS Code terminal (`flutter run`) | ✓ |
+| Android Studio / IntelliJ Run console | ✓ |
+| A plain terminal or Xcode | Shown, not clickable |
+
+VS Code needs the Dart extension, and Android Studio needs the Flutter or Dart
+plugin. Both are installed with Flutter support.
+
+The location is read from the stack trace, so it's available wherever Dart
+produces readable stack traces, such as Flutter apps in debug mode and Dart
+CLI and server apps. When stack traces aren't readable, for example on the web
+or in builds using `--obfuscate` or `--split-debug-info`, it's left out and
+everything else still works.
+
+Your own outputs get it as `record.location`, with the `uri`, `line`, and
+`column`, and the clickable `link`.
 
 ## License
 

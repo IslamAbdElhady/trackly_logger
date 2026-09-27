@@ -15,6 +15,7 @@ library;
 export 'src/console_output.dart';
 export 'src/developer_output.dart';
 export 'src/level.dart';
+export 'src/location.dart';
 export 'src/logger.dart';
 export 'src/logger_mixin.dart';
 export 'src/memory_output.dart';

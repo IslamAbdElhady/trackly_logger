@@ -1,6 +1,6 @@
 name: trackly_logger
-description: A lightweight, zero-dependency logger for Dart and Flutter with log levels, colored console output, tags, and automatic file:line caller info.
-version: 0.1.0
+description: A lightweight, zero-dependency logger for Dart and Flutter with log levels, colored output, tags, and clickable links to the line of code that wrote each log.
+version: 0.2.0
 repository: https://github.com/IslamAbdElhady/trackly_logger
 issue_tracker: https://github.com/IslamAbdElhady/trackly_logger/issues
 
