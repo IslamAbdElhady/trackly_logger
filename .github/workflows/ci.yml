@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call: # Run by publish.yml before publishing.
+
+permissions:
+  contents: read
 
 jobs:
   test:
