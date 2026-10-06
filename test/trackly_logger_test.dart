@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:trackly_logger/src/caller.dart';
 import 'package:trackly_logger/trackly_logger.dart';
 
 class _CaptureOutput extends TracklyOutput {
@@ -184,6 +185,19 @@ void main() {
       expect(location.column, 15); // The column of `info`.
       expect(location.link, '${location.uri}:$line:15');
       expect(location.fileName, 'trackly_logger_test.dart');
+    });
+
+    test('reads Windows file paths', () {
+      final trace = StackTrace.fromString(
+        '#0      TracklyLogger.info (package:trackly_logger/src/logger.dart:80:5)\n'
+        '#1      main (file:///C:/Users/dev/app/bin/main.dart:12:11)\n',
+      );
+      final location = findCaller(trace)!;
+
+      expect(location.line, 12);
+      expect(location.column, 11);
+      expect(location.fileName, 'main.dart');
+      expect(location.link, 'file:///C:/Users/dev/app/bin/main.dart:12:11');
     });
 
     test('is null when showCaller is off', () {
