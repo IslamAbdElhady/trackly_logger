@@ -32,3 +32,16 @@ jobs:
       - name: Publish dry run
         if: matrix.sdk == 'stable'
         run: dart pub publish --dry-run
+
+  score:
+    name: pub.dev score
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dart-lang/setup-dart@v1
+      - name: Install pana
+        run: dart pub global activate pana
+      - name: Supports every platform and keeps every point
+        run: |
+          dart pub global run pana --json --no-warning . > pana.json
+          python3 .github/scripts/check_pana.py pana.json
